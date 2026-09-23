@@ -69,6 +69,9 @@ h2{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-size:1.15rem;margin
 .bank-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .bank-left{font-size:2.6rem;font-weight:700;line-height:1}
 .bank-left.done{color:var(--good)}
+.upto{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.upto-t{font-size:1.7rem;font-weight:700;line-height:1}
+.cellfoot{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:5px}
 .cells{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-top:14px}
 .cell{aspect-ratio:1/1.15;border-radius:5px;border:1.5px dashed var(--line)}
 .cell.on{border:0;animation:pop .18s ease-out}
@@ -84,7 +87,7 @@ h2{font-family:"Bricolage Grotesque",Figtree,sans-serif;font-size:1.15rem;margin
 .rowline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
 .stepper{display:flex;align-items:center;gap:4px}
 .stepper button{width:36px;height:36px;border-radius:10px;background:var(--sunk);font-weight:700;font-size:1.1rem}
-.stepper .val{min-width:52px;text-align:center;font-weight:700}
+.stepper .val{min-width:64px;white-space:nowrap;text-align:center;font-weight:700}
 
 /* tiles */
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -226,7 +229,7 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const fmtDate=k=>{const d=fromKey(k);return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]};
 const fmtShort=k=>{const d=fromKey(k);return d.getDate()+' '+MON[d.getMonth()]};
 const fmtH=h=>{const r=Math.round(h*10)/10;return (Number.isInteger(r)?r:r.toFixed(1))+'h'};
-const fmtClock=h=>{const hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);return pad(hh)+':'+pad(mm)};
+const fmtClock=h=>{const hh=Math.floor(h)%24,mm=Math.round((h-Math.floor(h))*60);return (hh%12||12)+':'+pad(mm)+' '+(hh<12?'am':'pm')};
 const daysBetween=(a,b)=>Math.round((fromKey(b)-fromKey(a))/864e5);
 const mondayOf=k=>{const d=fromKey(k);const off=(d.getDay()+6)%7;d.setDate(d.getDate()-off);return keyOf(d)};
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -371,7 +374,7 @@ function renderTabs(){document.getElementById('tabs').innerHTML=[['log','Log'],[
 
 function rLog(){
  const k=ui.date,s=ui.session,d=day(k)||{m:[],e:[]},log=d[s],total=bankTotal(k,s),used=log.length*0.5,left=Math.max(0,total-used);
- const today=todayKey(),st=streak();
+ const today=todayKey(),st=streak(),start=s==='m'?wakeOf(k):13;
  const counts={};log.forEach(i=>{counts[i]=(counts[i]||0)+1});
  const cells=[];for(let i=0;i<Math.round(total*2);i++){const it=log[i];
   cells.push(it?'<span class="cell on" style="background:'+colorOf(it)+'"></span>':'<span class="cell"></span>')}
@@ -379,11 +382,13 @@ function rLog(){
   '<div class="mid"><div class="date">'+(k===today?'Today':fmtDate(k))+'</div><div class="small muted">'+(k===today?fmtDate(k)+', ':'')+
   (isWeekend(k)?'weekend':'weekday')+' targets'+(st?', '+st+'-day streak':'')+'</div></div>'+
   '<button class="navbtn" data-act="day" data-v="1" aria-label="Next day"'+(k>=today?' disabled':'')+'>›</button></div>';
- h+='<div class="seg" role="group"><button data-act="session" data-v="m" aria-pressed="'+(s==='m')+'">Morning<small>'+fmtClock(wakeOf(k))+' to 13:00</small></button>'+
-  '<button data-act="session" data-v="e" aria-pressed="'+(s==='e')+'">Evening<small>13:00 to '+fmtClock(bedOf(k))+'</small></button></div>';
+ h+='<div class="seg" role="group"><button data-act="session" data-v="m" aria-pressed="'+(s==='m')+'">Morning<small>'+fmtClock(wakeOf(k))+' to '+fmtClock(13)+'</small></button>'+
+  '<button data-act="session" data-v="e" aria-pressed="'+(s==='e')+'">Evening<small>'+fmtClock(13)+' to '+fmtClock(bedOf(k))+'</small></button></div>';
  h+='<section class="bank" id="bank"><div class="bank-top"><div><div class="bank-left num'+(left===0&&total>0?' done':'')+'">'+(left===0&&total>0?'Done':fmtH(left))+'</div>'+
   '<div class="small muted">'+(left===0&&total>0?'All '+fmtH(total)+' logged':'left to log of '+fmtH(total))+'</div></div>'+
-  (log.length?'<button class="btn" data-act="undo">Undo</button>':'')+'</div><div class="cells" aria-hidden="true">'+cells.join('')+'</div>';
+  '<div class="upto"><div><div class="small muted">Logged up to</div><div class="upto-t num">'+fmtClock(start+used)+'</div></div>'+
+  (log.length?'<button class="btn" data-act="undo">Undo</button>':'')+'</div></div><div class="cells" aria-hidden="true">'+cells.join('')+'</div>'+
+  '<div class="cellfoot num"><span>'+fmtClock(start)+'</span><span>'+fmtClock(start+total)+'</span></div>';
  if(s==='m'){
   const wakes=[6,6.5,7,7.5,8,8.5,9,9.5,10];
   h+='<div class="small muted" style="margin-top:14px">Woke up at</div><div class="chips">'+wakes.map(w=>'<button class="chip num" data-act="wake" data-v="'+w+'" aria-pressed="'+(wakeOf(k)===w)+'">'+fmtClock(w)+'</button>').join('')+'</div>'+
